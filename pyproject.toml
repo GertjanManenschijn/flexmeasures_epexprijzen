@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flexmeasures-price-importer"
+version = "0.1.0"
+description = "CLI plugin for importing EPEX electricity prices into FlexMeasures."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1",
+    "Flask>=2.3",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flexmeasures_price_importer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
