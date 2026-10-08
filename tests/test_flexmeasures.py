@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 from flexmeasures_price_importer.flexmeasures import NativeFlexMeasuresStore
 from flexmeasures_price_importer.models import PricePoint
@@ -12,6 +13,60 @@ class FakeBelief:
 class FakeDataFrame:
     def __init__(self, beliefs):
         self.beliefs = beliefs
+
+
+def test_existing_price_asset_gets_name_and_location_update():
+    asset_type = object()
+    asset = SimpleNamespace(
+        name="Nederland",
+        latitude=None,
+        longitude=None,
+        generic_asset_type=asset_type,
+    )
+
+    class FakeField:
+        def in_(self, values):
+            return values
+
+        def __eq__(self, other):
+            return other
+
+    class FakeAssetTypeQuery:
+        def filter_by(self, **kwargs):
+            return self
+
+        def one_or_none(self):
+            return asset_type
+
+    class FakeAssetQuery:
+        def filter_by(self, **kwargs):
+            return SimpleNamespace(one_or_none=lambda: None)
+
+        def filter(self, *conditions):
+            return SimpleNamespace(one_or_none=lambda: asset)
+
+    class FakeAsset:
+        name = FakeField()
+        generic_asset_type = FakeField()
+        query = FakeAssetQuery()
+
+    commits = []
+    store = object.__new__(NativeFlexMeasuresStore)
+    store.GenericAssetType = SimpleNamespace(query=FakeAssetTypeQuery())
+    store.GenericAsset = FakeAsset
+    store.db = SimpleNamespace(session=SimpleNamespace(commit=lambda: commits.append(True)))
+
+    result = store.get_or_create_public_price_asset(
+        "Transmission zone Nederland",
+        legacy_names=("Nederland",),
+        latitude=52.1326,
+        longitude=5.2913,
+    )
+
+    assert result is asset
+    assert asset.name == "Transmission zone Nederland"
+    assert (asset.latitude, asset.longitude) == (52.1326, 5.2913)
+    assert commits == [True]
 
 
 def test_save_prices_builds_native_timed_beliefs():

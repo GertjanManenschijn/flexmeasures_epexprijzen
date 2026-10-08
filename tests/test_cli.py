@@ -12,8 +12,10 @@ def test_register_sensors_uses_named_transmission_zone(monkeypatch) -> None:
     asset_requests = []
 
     class FakeStore:
-        def get_or_create_public_price_asset(self, name, legacy_names=()):
-            asset_requests.append((name, legacy_names))
+        def get_or_create_public_price_asset(
+            self, name, legacy_names=(), latitude=None, longitude=None
+        ):
+            asset_requests.append((name, legacy_names, latitude, longitude))
             return SimpleNamespace(id=7)
 
         def get_or_create_price_sensor(self, asset_id, name, resolution, timezone):
@@ -29,7 +31,7 @@ def test_register_sensors_uses_named_transmission_zone(monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert asset_requests == [
-        ("Transmission zone Nederland", ("Nederland",)),
+        ("Transmission zone Nederland", ("Nederland",), 52.1326, 5.2913),
     ]
 
 
@@ -43,7 +45,9 @@ def test_import_prices_commits_both_sensor_writes(monkeypatch) -> None:
             self.commits = 0
             stores.append(self)
 
-        def get_or_create_public_price_asset(self, name, legacy_names=()):
+        def get_or_create_public_price_asset(
+            self, name, legacy_names=(), latitude=None, longitude=None
+        ):
             return SimpleNamespace(id=7)
 
         def get_or_create_price_sensor(self, asset_id, name, resolution, timezone):

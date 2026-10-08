@@ -38,6 +38,8 @@ class NativeFlexMeasuresStore:
         self,
         name: str,
         legacy_names: tuple[str, ...] = (),
+        latitude: float | None = None,
+        longitude: float | None = None,
     ) -> Any:
         """Find or create an account-less public asset of the standard zone type."""
         asset_type = self.GenericAssetType.query.filter_by(name="transmission zone").one_or_none()
@@ -50,6 +52,7 @@ class NativeFlexMeasuresStore:
             name=name,
             generic_asset_type=asset_type,
         ).one_or_none()
+        asset_changed = False
         if asset is None and legacy_names:
             asset = self.GenericAsset.query.filter(
                 self.GenericAsset.name.in_(legacy_names),
@@ -57,14 +60,25 @@ class NativeFlexMeasuresStore:
             ).one_or_none()
             if asset is not None:
                 asset.name = name
-                self.db.session.commit()
+                asset_changed = True
         if asset is None:
             asset = self.GenericAsset(
                 name=name,
                 generic_asset_type=asset_type,
+                latitude=latitude,
+                longitude=longitude,
             )
             self.db.session.add(asset)
             self.db.session.commit()
+        else:
+            if latitude is not None and asset.latitude != latitude:
+                asset.latitude = latitude
+                asset_changed = True
+            if longitude is not None and asset.longitude != longitude:
+                asset.longitude = longitude
+                asset_changed = True
+            if asset_changed:
+                self.db.session.commit()
         return asset
 
     def get_or_create_price_sensor(

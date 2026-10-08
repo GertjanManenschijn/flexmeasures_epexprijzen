@@ -30,6 +30,8 @@ def _get_or_create_price_sensors(
     asset = store.get_or_create_public_price_asset(
         "Transmission zone Nederland",
         legacy_names=("Nederland",),
+        latitude=52.1326,
+        longitude=5.2913,
     )
     sensors = tuple(
         store.get_or_create_price_sensor(
