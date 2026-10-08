@@ -80,15 +80,32 @@ def import_prices(
         consumption_sensor, production_sensor = _get_or_create_price_sensors(
             store, provider, interval
         )
-        store.ensure_prices_are_new(consumption_sensor, points)
-        store.ensure_prices_are_new(production_sensor, points)
     except ValueError as error:
         raise click.ClickException(str(error)) from error
+    consumption_points = store.filter_new_prices(consumption_sensor, points)
+    production_points = store.filter_new_prices(production_sensor, points)
     belief_time = datetime.fromisoformat(prior) if prior else None
-    store.save_prices(consumption_sensor, points, lambda point: point.price, belief_time)
-    store.save_prices(production_sensor, points, lambda point: point.production_price, belief_time)
+    if consumption_points:
+        store.save_prices(
+            consumption_sensor,
+            consumption_points,
+            lambda point: point.price,
+            belief_time,
+        )
+    if production_points:
+        store.save_prices(
+            production_sensor,
+            production_points,
+            lambda point: point.production_price,
+            belief_time,
+        )
     store.commit()
-    click.echo(f"Imported {len(points)} {interval} prices for consumption and production.")
+    click.echo(
+        f"Imported {len(consumption_points)} consumption and "
+        f"{len(production_points)} production {interval} prices; "
+        f"skipped {len(points) - len(consumption_points)} and "
+        f"{len(points) - len(production_points)} existing prices."
+    )
 
 
 

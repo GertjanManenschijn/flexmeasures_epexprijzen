@@ -135,17 +135,19 @@ class NativeFlexMeasuresStore:
             raise ValueError("Consumption and production price sensors belong to different assets")
         return consumption_sensor, production_sensor
 
-    def ensure_prices_are_new(self, sensor: Any, points: list[PricePoint]) -> None:
-        """Reject an import when any event for this sensor already exists."""
+    def filter_new_prices(
+        self,
+        sensor: Any,
+        points: list[PricePoint],
+    ) -> list[PricePoint]:
+        """Return only prices whose event does not exist for this sensor."""
         event_starts = [point.timestamp for point in points]
-        existing = self.TimedBelief.query.filter(
+        existing_beliefs = self.TimedBelief.query.filter(
             self.TimedBelief.sensor == sensor,
             self.TimedBelief.event_start.in_(event_starts),
-        ).count()
-        if existing:
-            raise ValueError(
-                f"{existing} price event(s) already exist for sensor {sensor.id}; import aborted"
-            )
+        ).all()
+        existing_starts = {belief.event_start for belief in existing_beliefs}
+        return [point for point in points if point.timestamp not in existing_starts]
 
     def save_prices(
         self,

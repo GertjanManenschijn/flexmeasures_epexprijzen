@@ -42,6 +42,7 @@ def test_import_prices_commits_both_sensor_writes(monkeypatch) -> None:
         def __init__(self) -> None:
             self.created_sensors = []
             self.saved_sensors = []
+            self.saved_points = []
             self.commits = 0
             stores.append(self)
 
@@ -55,16 +56,20 @@ def test_import_prices_commits_both_sensor_writes(monkeypatch) -> None:
             self.created_sensors.append(sensor)
             return sensor
 
-        def ensure_prices_are_new(self, sensor, points) -> None:
-            pass
+        def filter_new_prices(self, sensor, points):
+            return points[1:]
 
         def save_prices(self, sensor, points, value_getter, prior) -> None:
             self.saved_sensors.append(sensor)
+            self.saved_points.append(points)
 
         def commit(self) -> None:
             self.commits += 1
 
-    points = [PricePoint(datetime(2026, 1, 1, tzinfo=timezone.utc), 0.30)]
+    points = [
+        PricePoint(datetime(2026, 1, 1, tzinfo=timezone.utc), 0.30),
+        PricePoint(datetime(2026, 1, 2, tzinfo=timezone.utc), 0.31),
+    ]
     monkeypatch.setattr(cli, "fetch_epex_prices", lambda provider, interval: points)
     monkeypatch.setattr(cli, "NativeFlexMeasuresStore", FakeStore)
     app = Flask(__name__)
@@ -80,5 +85,7 @@ def test_import_prices_commits_both_sensor_writes(monkeypatch) -> None:
         "Anwb Energie production price",
     ]
     assert stores[0].saved_sensors == stores[0].created_sensors
+    assert stores[0].saved_points == [[points[1]], [points[1]]]
     assert stores[0].commits == 1
-    assert "Imported 1 hourly prices" in result.output
+    assert "Imported 1 consumption and 1 production hourly prices" in result.output
+    assert "skipped 1 and 1 existing prices" in result.output

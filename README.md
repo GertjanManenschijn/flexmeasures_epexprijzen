@@ -33,7 +33,7 @@ Import today and tomorrow from EPEX through FlexMeasures:
 flexmeasures epex-prices import-prices anwb-energie hourly
 ```
 
-Use `--prior` optionally to record the publication time of day-ahead prices. The command creates missing provider sensors automatically and aborts if any requested event has already been imported. The commands require a running FlexMeasures app context and are exposed only through FlexMeasures.
+Use `--prior` optionally to record the publication time of day-ahead prices. The command creates missing provider sensors automatically, skips prices that already exist, and imports newly published prices for tomorrow on a later run. The commands require a running FlexMeasures app context and are exposed only through FlexMeasures.
 
 ## FlexMeasures plugin loading
 

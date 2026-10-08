@@ -69,6 +69,36 @@ def test_existing_price_asset_gets_name_and_location_update():
     assert commits == [True]
 
 
+def test_filter_new_prices_keeps_tomorrow_when_today_exists():
+    today = PricePoint(datetime(2026, 1, 1, tzinfo=timezone.utc), 0.30)
+    tomorrow = PricePoint(datetime(2026, 1, 2, tzinfo=timezone.utc), 0.31)
+
+    class FakeField:
+        def in_(self, values):
+            return values
+
+        def __eq__(self, other):
+            return other
+
+    class FakeQuery:
+        def filter(self, *conditions):
+            return self
+
+        def all(self):
+            return [SimpleNamespace(event_start=today.timestamp)]
+
+    store = object.__new__(NativeFlexMeasuresStore)
+    store.TimedBelief = SimpleNamespace(
+        sensor=FakeField(),
+        event_start=FakeField(),
+        query=FakeQuery(),
+    )
+
+    result = store.filter_new_prices(object(), [today, tomorrow])
+
+    assert result == [tomorrow]
+
+
 def test_save_prices_builds_native_timed_beliefs():
     store = object.__new__(NativeFlexMeasuresStore)
     store.get_or_create_source = lambda **kwargs: "epex-source"

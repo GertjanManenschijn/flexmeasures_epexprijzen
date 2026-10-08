@@ -32,3 +32,14 @@ def test_parse_epex_response_removes_energy_tax_for_production():
 
     assert points[0].price == 0.30
     assert points[0].production_price == 0.19
+
+
+def test_parse_epex_response_includes_tomorrow_prices():
+    points = parse_epex_response(
+        {
+            "today": [{"t": "2026-01-01T23:00:00Z", "price": 0.30}],
+            "tomorrow": [{"t": "2026-01-02T00:00:00Z", "price": 0.31}],
+        }
+    )
+
+    assert [point.price for point in points] == [0.30, 0.31]
