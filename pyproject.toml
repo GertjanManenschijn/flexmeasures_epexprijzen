@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flexmeasures-price-importer"
-version = "0.1.0"
+version = "0.1.1"
 description = "CLI plugin for importing EPEX electricity prices into FlexMeasures."
 readme = "README.md"
 requires-python = ">=3.10"
