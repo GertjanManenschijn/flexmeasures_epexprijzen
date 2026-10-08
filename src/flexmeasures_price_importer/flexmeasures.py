@@ -145,3 +145,7 @@ class NativeFlexMeasuresStore:
             for point in points
         ]
         return self.save_to_db(self.BeliefsDataFrame(beliefs))
+
+    def commit(self) -> None:
+        """Commit pending FlexMeasures belief writes."""
+        self.db.session.commit()

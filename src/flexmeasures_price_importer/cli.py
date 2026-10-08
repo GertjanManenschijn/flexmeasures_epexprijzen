@@ -71,6 +71,7 @@ def import_prices(
     belief_time = datetime.fromisoformat(prior) if prior else None
     store.save_prices(consumption_sensor, points, lambda point: point.price, belief_time)
     store.save_prices(production_sensor, points, lambda point: point.production_price, belief_time)
+    store.commit()
     click.echo(f"Imported {len(points)} {interval} prices for consumption and production.")
 
 
