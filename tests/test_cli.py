@@ -1,10 +1,36 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 from flask import Flask
 
 from flexmeasures_price_importer import cli
 from flexmeasures_price_importer.api import price_importer_blueprint
 from flexmeasures_price_importer.models import PricePoint
+
+
+def test_register_sensors_uses_named_transmission_zone(monkeypatch) -> None:
+    asset_requests = []
+
+    class FakeStore:
+        def get_or_create_public_price_asset(self, name, legacy_names=()):
+            asset_requests.append((name, legacy_names))
+            return SimpleNamespace(id=7)
+
+        def get_or_create_price_sensor(self, asset_id, name, resolution, timezone):
+            return SimpleNamespace(id=len(name))
+
+    monkeypatch.setattr(cli, "NativeFlexMeasuresStore", FakeStore)
+    app = Flask(__name__)
+    app.register_blueprint(price_importer_blueprint)
+
+    result = app.test_cli_runner().invoke(
+        args=["epex-prices", "register-price-sensors", "anwb-energie", "hourly"]
+    )
+
+    assert result.exit_code == 0
+    assert asset_requests == [
+        ("Transmission zone Nederland", ("Nederland",)),
+    ]
 
 
 def test_import_prices_commits_both_sensor_writes(monkeypatch) -> None:

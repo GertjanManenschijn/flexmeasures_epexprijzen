@@ -34,7 +34,11 @@ class NativeFlexMeasuresStore:
             raise ValueError(f"FlexMeasures asset {asset_id} does not exist")
         return asset
 
-    def get_or_create_public_price_asset(self, name: str) -> Any:
+    def get_or_create_public_price_asset(
+        self,
+        name: str,
+        legacy_names: tuple[str, ...] = (),
+    ) -> Any:
         """Find or create an account-less public asset of the standard zone type."""
         asset_type = self.GenericAssetType.query.filter_by(name="transmission zone").one_or_none()
         if asset_type is None:
@@ -46,6 +50,14 @@ class NativeFlexMeasuresStore:
             name=name,
             generic_asset_type=asset_type,
         ).one_or_none()
+        if asset is None and legacy_names:
+            asset = self.GenericAsset.query.filter(
+                self.GenericAsset.name.in_(legacy_names),
+                self.GenericAsset.generic_asset_type == asset_type,
+            ).one_or_none()
+            if asset is not None:
+                asset.name = name
+                self.db.session.commit()
         if asset is None:
             asset = self.GenericAsset(
                 name=name,

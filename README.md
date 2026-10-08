@@ -25,7 +25,7 @@ Create a public `transmission zone` asset and register both provider-specific se
 flexmeasures epex-prices register-price-sensors anwb-energie hourly
 ```
 
-All providers are registered under the public `Nederland` transmission zone.
+All providers are registered under the public `Transmission zone Nederland` asset.
 
 Import today and tomorrow from EPEX through FlexMeasures:
 

@@ -34,7 +34,10 @@ def register_sensors(
     production_name = f"{provider_label} production price"
     store = NativeFlexMeasuresStore()
     try:
-        asset = store.get_or_create_public_price_asset("Nederland")
+        asset = store.get_or_create_public_price_asset(
+            "Transmission zone Nederland",
+            legacy_names=("Nederland",),
+        )
     except ValueError as error:
         raise click.ClickException(str(error)) from error
     for name in (consumption_name, production_name):
