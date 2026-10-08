@@ -1,6 +1,7 @@
 """Command-line interface for EPEX to FlexMeasures imports."""
 
 from datetime import datetime, timedelta
+from typing import Any
 
 import click
 from flask.cli import with_appcontext
@@ -20,6 +21,28 @@ def _provider_label(provider: str) -> str:
     return provider.replace("-", " ").title()
 
 
+def _get_or_create_price_sensors(
+    store: NativeFlexMeasuresStore,
+    provider: str,
+    interval: str,
+) -> tuple[Any, Any]:
+    provider_label = _provider_label(provider)
+    asset = store.get_or_create_public_price_asset(
+        "Transmission zone Nederland",
+        legacy_names=("Nederland",),
+    )
+    sensors = tuple(
+        store.get_or_create_price_sensor(
+            asset.id,
+            f"{provider_label} {direction} price",
+            _resolution(interval)[1],
+            "Europe/Amsterdam",
+        )
+        for direction in ("consumption", "production")
+    )
+    return sensors
+
+
 @price_importer_blueprint.cli.command("register-price-sensors")
 @with_appcontext
 @click.argument("provider")
@@ -29,25 +52,13 @@ def register_sensors(
     interval: str,
 ) -> None:
     """Create provider-specific price sensors under the public Netherlands zone."""
-    provider_label = _provider_label(provider)
-    consumption_name = f"{provider_label} consumption price"
-    production_name = f"{provider_label} production price"
     store = NativeFlexMeasuresStore()
     try:
-        asset = store.get_or_create_public_price_asset(
-            "Transmission zone Nederland",
-            legacy_names=("Nederland",),
-        )
+        sensors = _get_or_create_price_sensors(store, provider, interval)
     except ValueError as error:
         raise click.ClickException(str(error)) from error
-    for name in (consumption_name, production_name):
-        sensor = store.get_or_create_price_sensor(
-            asset.id,
-            name,
-            _resolution(interval)[1],
-            "Europe/Amsterdam",
-        )
-        click.echo(f"{name}: {sensor.id}")
+    for sensor in sensors:
+        click.echo(f"{sensor.name}: {sensor.id}")
 
 
 @price_importer_blueprint.cli.command("import-prices")
@@ -64,8 +75,8 @@ def import_prices(
     points = fetch_epex_prices(provider, interval)
     store = NativeFlexMeasuresStore()
     try:
-        consumption_sensor, production_sensor = store.find_price_sensors(
-            provider, _resolution(interval)[1]
+        consumption_sensor, production_sensor = _get_or_create_price_sensors(
+            store, provider, interval
         )
         store.ensure_prices_are_new(consumption_sensor, points)
         store.ensure_prices_are_new(production_sensor, points)

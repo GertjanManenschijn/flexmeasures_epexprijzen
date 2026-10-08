@@ -17,7 +17,7 @@ def test_register_sensors_uses_named_transmission_zone(monkeypatch) -> None:
             return SimpleNamespace(id=7)
 
         def get_or_create_price_sensor(self, asset_id, name, resolution, timezone):
-            return SimpleNamespace(id=len(name))
+            return SimpleNamespace(id=len(name), name=name)
 
     monkeypatch.setattr(cli, "NativeFlexMeasuresStore", FakeStore)
     app = Flask(__name__)
@@ -38,12 +38,18 @@ def test_import_prices_commits_both_sensor_writes(monkeypatch) -> None:
 
     class FakeStore:
         def __init__(self) -> None:
+            self.created_sensors = []
             self.saved_sensors = []
             self.commits = 0
             stores.append(self)
 
-        def find_price_sensors(self, provider, resolution):
-            return "consumption", "production"
+        def get_or_create_public_price_asset(self, name, legacy_names=()):
+            return SimpleNamespace(id=7)
+
+        def get_or_create_price_sensor(self, asset_id, name, resolution, timezone):
+            sensor = SimpleNamespace(id=len(name), name=name)
+            self.created_sensors.append(sensor)
+            return sensor
 
         def ensure_prices_are_new(self, sensor, points) -> None:
             pass
@@ -65,6 +71,10 @@ def test_import_prices_commits_both_sensor_writes(monkeypatch) -> None:
     )
 
     assert result.exit_code == 0
-    assert stores[0].saved_sensors == ["consumption", "production"]
+    assert [sensor.name for sensor in stores[0].created_sensors] == [
+        "Anwb Energie consumption price",
+        "Anwb Energie production price",
+    ]
+    assert stores[0].saved_sensors == stores[0].created_sensors
     assert stores[0].commits == 1
     assert "Imported 1 hourly prices" in result.output
